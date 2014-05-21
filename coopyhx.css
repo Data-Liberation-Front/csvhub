@@ -1,0 +1,11 @@
+.data td.modify {
+  background-color: #aaf !important;
+}
+
+.data td.add, .data tr.add {
+  background-color: #CFD !important;
+}
+
+.data td.remove, .data tr.remove {
+  background-color: #FDD !important;
+}

@@ -9,7 +9,11 @@
         "https://github.com/*"
       ],
       "js": [
+        "coopyhx.js",
         "script.js"
+      ],
+      "css": [
+        "coopyhx.css"
       ],
       "run_at": "document_end"
     }
