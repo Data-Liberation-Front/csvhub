@@ -15,17 +15,40 @@
 }
 
 .csvhub-diff tr:nth-child(even) {
-  background-color: #F8F8F8;
+  background-color: #f8f8f8;
 }
 
-.csvhub-diff td.modify {
+.csvhub-diff tr:nth-child(even) td.modify,
+.csvhub-diff tr:nth-child(even) th.modify {
+  background-color: #BFCFD6 !important;
+}
+
+.csvhub-diff tr:nth-child(odd) td.modify,
+.csvhub-diff tr:nth-child(odd) th.modify {
   background-color: #C5D5DD !important;
 }
 
-.csvhub-diff td.add, .data tr.add {
+.csvhub-diff tr:nth-child(even) td.add,
+.csvhub-diff tr:nth-child(even) th.add,
+.csvhub-diff tr.add:nth-child(even) {
+  background-color: #D6F8D6 !important;
+}
+
+
+.csvhub-diff tr:nth-child(odd) td.add,
+.csvhub-diff tr:nth-child(odd) th.add,
+.csvhub-diff tr.add:nth-child(odd) {
   background-color: #DFD !important;
 }
 
-.csvhub-diff td.remove, .data tr.remove {
+.csvhub-diff tr:nth-child(even) td.remove,
+.csvhub-diff tr:nth-child(even) th.remove,
+.csvhub-diff tr.remove:nth-child(even) {
+  background-color: #F8D6D6 !important;
+}
+
+.csvhub-diff tr:nth-child(odd) td.remove,
+.csvhub-diff tr:nth-child(odd) th.remove,
+.csvhub-diff tr.remove:nth-child(odd) {
   background-color: #FDD !important;
 }
