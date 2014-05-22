@@ -9,13 +9,13 @@
         "https://github.com/*"
       ],
       "js": [
-        "coopyhx.js",
-        "jquery-1.11.1.js",
-        "jquery.csv-0.71.js",
+        "js/coopyhx.js",
+        "js/jquery-1.11.1.js",
+        "js/jquery.csv-0.71.js",
         "csvhub.js"
       ],
       "css": [
-        "coopyhx.css"
+        "css/coopyhx.css"
       ],
       "run_at": "document_end"
     }
