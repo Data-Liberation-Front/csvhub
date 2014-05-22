@@ -1,11 +1,31 @@
-.data td.modify {
-  background-color: #aaf !important;
+.csvhub-diff {
 }
 
-.data td.add, .data tr.add {
-  background-color: #CFD !important;
+.csvhub-diff table {
+  width: 100%;
 }
 
-.data td.remove, .data tr.remove {
+.csvhub-diff th {
+  text-align: left;
+}
+
+.csvhub-diff td, .csvhub-diff th {
+  border: 1px solid #DDD;
+  padding: 5px;
+}
+
+.csvhub-diff tr:nth-child(even) {
+  background-color: #F8F8F8;
+}
+
+.csvhub-diff td.modify {
+  background-color: #C5D5DD !important;
+}
+
+.csvhub-diff td.add, .data tr.add {
+  background-color: #DFD !important;
+}
+
+.csvhub-diff td.remove, .data tr.remove {
   background-color: #FDD !important;
 }

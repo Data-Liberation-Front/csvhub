@@ -45,7 +45,7 @@ for (var f = 0; f < files.length; f++) {
     diff2html.render(table_diff);
     diff_html = diff2html.html()
 
-    files[f].querySelector("div.data").innerHTML = diff_html;
+    files[f].querySelector("div.data").innerHTML = "<div class='csvhub-diff'>"+diff_html+"</div>";
 
   }
 
