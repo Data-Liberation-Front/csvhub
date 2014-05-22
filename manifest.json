@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "CSVHub",
   "description": "Shows useful diffs for CSV files on GitHub",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "content_scripts": [
     {
       "matches": [
