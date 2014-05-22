@@ -42,6 +42,9 @@ for (var f = 0; f < files.length; f++) {
     var table_diff = new coopy.CoopyTableView(data_diff);
 
     var flags = new coopy.CompareFlags();
+    flags.show_unchanged = true;
+    flags.show_unchanged_columns = true;
+    flags.always_show_header = false;
     var highlighter = new coopy.TableDiff(alignment,flags);
     highlighter.hilite(table_diff);
 
