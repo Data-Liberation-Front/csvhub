@@ -18,16 +18,20 @@ for (var f = 0; f < files.length; f++) {
       line = lines[l].textContent;
 
       if (line.indexOf("+") == 0) {
-        new_data.push(line.substr(1).split(","));
+        new_data.push(line.substr(1));
       }
       if (line.indexOf("-") == 0) {
-        old_data.push(line.substr(1).split(","));
+        old_data.push(line.substr(1));
       }
       if (line.indexOf(" ") == 0) {
-        new_data.push(line.substr(1).split(","));
-        old_data.push(line.substr(1).split(","));
+        new_data.push(line.substr(1));
+        old_data.push(line.substr(1));
       }
     }
+
+    // Parse CSV
+    new_data = $.csv.toArrays(new_data.join("\n"));
+    old_data = $.csv.toArrays(old_data.join("\n"));
 
     var old_table = new coopy.CoopyTableView(old_data);
     var new_table = new coopy.CoopyTableView(new_data);

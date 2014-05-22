@@ -10,6 +10,8 @@
       ],
       "js": [
         "coopyhx.js",
+        "jquery-1.11.1.js",
+        "jquery.csv-0.71.js",
         "csvhub.js"
       ],
       "css": [
