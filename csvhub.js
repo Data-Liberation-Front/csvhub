@@ -16,24 +16,30 @@ for (var f = 0; f < files.length; f++) {
 
     for (var l = 0; l < lines.length; l++) {
 
+      // Parse data from line
       line = lines[l].textContent;
+      data = $.csv.toArray(line.substr(1).trim());
 
+      // Line has been added
       if (line.indexOf("+") == 0) {
-        new_data.push(line.substr(1).trim());
+        new_data.push(data);
       }
+
+      // Line has been removed
       if (line.indexOf("-") == 0) {
-        old_data.push(line.substr(1).trim());
+        old_data.push(data);
       }
+
+      // Line has not changed
       if (line.indexOf(" ") == 0) {
-        new_data.push(line.substr(1).trim());
-        old_data.push(line.substr(1).trim());
+        new_data.push(data);
+        old_data.push(data);
+      }
+
       }
     }
 
     // Parse CSV
-    new_data = $.csv.toArrays(new_data.join("\n"));
-    old_data = $.csv.toArrays(old_data.join("\n"));
-
     var old_table = new coopy.CoopyTableView(old_data);
     var new_table = new coopy.CoopyTableView(new_data);
 
