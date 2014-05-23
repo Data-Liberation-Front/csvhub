@@ -3,7 +3,7 @@ files = $("div#files.diff-view .file");
 for (var f = 0; f < files.length; f++) {
 
   // check if this is a CSV file
-  filename = files[f].querySelector("[data-path]").getAttribute('data-path');
+  filename = files[f].querySelector("div[data-path]").getAttribute('data-path');
   if (filename.match(".*\.csv")) {
 
 
