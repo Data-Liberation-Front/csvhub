@@ -18,14 +18,14 @@ for (var f = 0; f < files.length; f++) {
       line = lines[l].textContent;
 
       if (line.indexOf("+") == 0) {
-        new_data.push(line.substr(1));
+        new_data.push(line.substr(1).trim());
       }
       if (line.indexOf("-") == 0) {
-        old_data.push(line.substr(1));
+        old_data.push(line.substr(1).trim());
       }
       if (line.indexOf(" ") == 0) {
-        new_data.push(line.substr(1));
-        old_data.push(line.substr(1));
+        new_data.push(line.substr(1).trim());
+        old_data.push(line.substr(1).trim());
       }
     }
 
