@@ -36,6 +36,17 @@ for (var f = 0; f < files.length; f++) {
         old_data.push(data);
       }
 
+      // Line is a placeholder for hidden content
+      if (line.indexOf("@") == 0) {
+        // Ignore first line if it's a hidden bit
+        if (new_data.length > 0) {
+          placeholder = Array(new_data[0].length);
+          for (var p = 0; p < placeholder.length; p++) {
+            placeholder[p] = '...';
+          }
+          new_data.push(placeholder);
+          old_data.push(placeholder);
+        }
       }
     }
 
