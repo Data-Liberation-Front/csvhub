@@ -36,7 +36,6 @@ for (var f = 0; f < files.length; f++) {
         old_data.push(data);
       }
 
-      }
     }
 
     // Parse CSV
