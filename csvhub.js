@@ -1,10 +1,11 @@
 // find all files in the page
-files = document.querySelectorAll("div#files.diff-view .file");
+files = $("div#files.diff-view .file");
 for (var f = 0; f < files.length; f++) {
 
   // check if this is a CSV file
   filename = files[f].querySelector("[data-path]").getAttribute('data-path');
   if (filename.match(".*\.csv")) {
+
 
     // Get all diff lines
     lines = files[f].querySelectorAll(".diff-line-pre");
