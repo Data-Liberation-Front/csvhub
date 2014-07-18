@@ -3,6 +3,10 @@
   "name": "CSVHub",
   "description": "Shows useful diffs for CSV files on GitHub",
   "version": "1.0.0",
+  "icons": {
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
   "content_scripts": [
     {
       "matches": [
@@ -17,10 +21,6 @@
       "css": [
         "css/coopyhx.css"
       ],
-      "icons": {
-        "48": "icons/48.png",
-        "128": "icons/128.png"
-      },
       "run_at": "document_end"
     }
   ]
