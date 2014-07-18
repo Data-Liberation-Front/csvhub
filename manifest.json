@@ -13,7 +13,7 @@
         "https://github.com/*"
       ],
       "js": [
-        "js/coopyhx.js",
+        "js/daff-1.1.8.js",
         "js/jquery-1.11.1.js",
         "js/jquery.csv-0.71.js",
         "csvhub.js"

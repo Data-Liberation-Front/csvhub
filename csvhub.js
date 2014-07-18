@@ -39,22 +39,22 @@ for (var f = 0; f < files.length; f++) {
     }
 
     // Parse CSV
-    var old_table = new coopy.CoopyTableView(old_data);
-    var new_table = new coopy.CoopyTableView(new_data);
+    var old_table = new daff.TableView(old_data);
+    var new_table = new daff.TableView(new_data);
 
-    var alignment = coopy.compareTables(old_table,new_table).align();
+    var alignment = daff.compareTables(old_table,new_table).align();
 
     var data_diff = [];
-    var table_diff = new coopy.CoopyTableView(data_diff);
+    var table_diff = new daff.TableView(data_diff);
 
-    var flags = new coopy.CompareFlags();
+    var flags = new daff.CompareFlags();
     flags.show_unchanged = true;
     flags.show_unchanged_columns = true;
     flags.always_show_header = false;
-    var highlighter = new coopy.TableDiff(alignment,flags);
+    var highlighter = new daff.TableDiff(alignment,flags);
     highlighter.hilite(table_diff);
 
-    var diff2html = new coopy.DiffRender();
+    var diff2html = new daff.DiffRender();
     diff2html.render(table_diff);
     diff_html = diff2html.html()
 

@@ -1,5 +1,5 @@
 (function ($hx_exports) { "use strict";
-$hx_exports.coopy = {};
+$hx_exports.coopy = $hx_exports.coopy || {};
 var $estr = function() { return js.Boot.__string_rec(this,''); };
 var HxOverrides = function() { };
 HxOverrides.__name__ = true;
@@ -173,15 +173,11 @@ coopy.Alignment.prototype = {
 	,toString: function() {
 		return "" + this.map_a2b.toString();
 	}
+	,toOrderPruned: function(rowlike) {
+		return this.toOrderCached(true,rowlike);
+	}
 	,toOrder: function() {
-		if(this.order_cache != null) {
-			if(this.reference != null) {
-				if(!this.order_cache_has_reference) this.order_cache = null;
-			}
-		}
-		if(this.order_cache == null) this.order_cache = this.toOrder3();
-		if(this.reference != null) this.order_cache_has_reference = true;
-		return this.order_cache;
+		return this.toOrderCached(false,false);
 	}
 	,getSource: function() {
 		return this.ta;
@@ -195,7 +191,101 @@ coopy.Alignment.prototype = {
 	,getTargetHeader: function() {
 		return this.ib;
 	}
-	,toOrder3: function() {
+	,toOrderCached: function(prune,rowlike) {
+		if(this.order_cache != null) {
+			if(this.reference != null) {
+				if(!this.order_cache_has_reference) this.order_cache = null;
+			}
+		}
+		if(this.order_cache == null) this.order_cache = this.toOrder3(prune,rowlike);
+		if(this.reference != null) this.order_cache_has_reference = true;
+		return this.order_cache;
+	}
+	,pruneOrder: function(o,ref,rowlike) {
+		var tl = ref.tb;
+		var tr = this.tb;
+		if(rowlike) {
+			if(tl.get_width() != tr.get_width()) return;
+		} else if(tl.get_height() != tr.get_height()) return;
+		var units = o.getList();
+		var left_units = new Array();
+		var left_locs = new Array();
+		var right_units = new Array();
+		var right_locs = new Array();
+		var eliminate = new Array();
+		var ct = 0;
+		var _g1 = 0;
+		var _g = units.length;
+		while(_g1 < _g) {
+			var i = _g1++;
+			var unit = units[i];
+			if(unit.l < 0 && unit.r >= 0) {
+				right_units.push(unit);
+				right_locs.push(i);
+				ct++;
+			} else if(unit.r < 0 && unit.l >= 0) {
+				left_units.push(unit);
+				left_locs.push(i);
+				ct++;
+			} else if(ct > 0) {
+				left_units.splice(0,left_units.length);
+				right_units.splice(0,right_units.length);
+				left_locs.splice(0,left_locs.length);
+				right_locs.splice(0,right_locs.length);
+				ct = 0;
+			}
+			while(left_locs.length > 0 && right_locs.length > 0) {
+				var l = left_units[0].l;
+				var r = right_units[0].r;
+				var view = tl.getCellView();
+				var match = true;
+				if(rowlike) {
+					var w = tl.get_width();
+					var _g2 = 0;
+					while(_g2 < w) {
+						var j = _g2++;
+						if(!view.equals(tl.getCell(j,l),tr.getCell(j,r))) {
+							match = false;
+							break;
+						}
+					}
+				} else {
+					var h = tl.get_height();
+					var _g21 = 0;
+					while(_g21 < h) {
+						var j1 = _g21++;
+						if(!view.equals(tl.getCell(l,j1),tr.getCell(r,j1))) {
+							match = false;
+							break;
+						}
+					}
+				}
+				if(match) {
+					eliminate.push(left_locs[0]);
+					eliminate.push(right_locs[0]);
+				}
+				left_units.shift();
+				right_units.shift();
+				left_locs.shift();
+				right_locs.shift();
+				ct -= 2;
+			}
+		}
+		if(eliminate.length > 0) {
+			eliminate.sort(function(a,b) {
+				return a - b;
+			});
+			var del = 0;
+			var _g3 = 0;
+			while(_g3 < eliminate.length) {
+				var e = eliminate[_g3];
+				++_g3;
+				o.getList().splice(e - del,1);
+				del++;
+			}
+		}
+	}
+	,toOrder3: function(prune,rowlike) {
 		var ref = this.reference;
 		if(ref == null) {
 			ref = new coopy.Alignment();
@@ -356,6 +446,7 @@ coopy.Alignment.prototype = {
 			xl++;
 			xr++;
 		}
+		if(prune) this.pruneOrder(order,ref,rowlike);
 		return order;
 	}
 };
@@ -541,7 +632,7 @@ coopy.CompareTable.prototype = {
 	,alignCore2: function(align,a,b) {
 		if(align.meta == null) align.meta = new coopy.Alignment();
 		this.alignColumns(align.meta,a,b);
-		var column_order = align.meta.toOrder();
+		var column_order = align.meta.toOrderPruned(false);
 		var common_units = new Array();
 		var _g = 0;
 		var _g1 = column_order.getList();
@@ -872,7 +963,6 @@ coopy.Coopy.randomTests = function() {
 	report.clear();
 	compare.compare(d1,d2,d3,report);
 	console.log("report is " + Std.string(report));
-	var tv = new coopy.TableView();
 	var comp = new coopy.TableComparisonState();
 	var ct = new coopy.CompareTable();
 	comp.a = st;
@@ -882,9 +972,9 @@ coopy.Coopy.randomTests = function() {
 	var t1 = new coopy.SimpleTable(3,2);
 	var t2 = new coopy.SimpleTable(3,2);
 	var t3 = new coopy.SimpleTable(3,2);
-	var dt1 = new coopy.ViewedDatum(t1,new coopy.TableView());
-	var dt2 = new coopy.ViewedDatum(t2,new coopy.TableView());
-	var dt3 = new coopy.ViewedDatum(t3,new coopy.TableView());
+	var dt1 = new coopy.ViewedDatum(t1,new coopy.SimpleView());
+	var dt2 = new coopy.ViewedDatum(t2,new coopy.SimpleView());
+	var dt3 = new coopy.ViewedDatum(t3,new coopy.SimpleView());
 	compare.compare(dt1,dt2,dt3,report);
 	console.log("report is " + Std.string(report));
 	t3.setCell(1,1,new coopy.SimpleCell("hello"));
@@ -953,128 +1043,6 @@ coopy.Coopy.jsonToTable = function(json) {
 	}
 	if(output != null) output.trimBlank();
 	return output;
-};
-coopy.Coopy.coopyhx = function(io) {
-	var args = io.args();
-	if(args[0] == "--test") return coopy.Coopy.randomTests();
-	var more = true;
-	var output = null;
-	var css_output = null;
-	var fragment = false;
-	var pretty = true;
-	var flags = new coopy.CompareFlags();
-	flags.always_show_header = true;
-	while(more) {
-		more = false;
-		var _g1 = 0;
-		var _g = args.length;
-		while(_g1 < _g) {
-			var i = _g1++;
-			var tag = args[i];
-			if(tag == "--output") {
-				more = true;
-				output = args[i + 1];
-				args.splice(i,2);
-				break;
-			} else if(tag == "--css") {
-				more = true;
-				fragment = true;
-				css_output = args[i + 1];
-				args.splice(i,2);
-				break;
-			} else if(tag == "--fragment") {
-				more = true;
-				fragment = true;
-				args.splice(i,1);
-				break;
-			} else if(tag == "--plain") {
-				more = true;
-				pretty = false;
-				args.splice(i,1);
-				break;
-			} else if(tag == "--all") {
-				more = true;
-				flags.show_unchanged = true;
-				args.splice(i,1);
-				break;
-			} else if(tag == "--act") {
-				more = true;
-				if(flags.acts == null) flags.acts = new haxe.ds.StringMap();
-				flags.acts.set(args[i + 1],true);
-				true;
-				args.splice(i,2);
-				break;
-			} else if(tag == "--context") {
-				more = true;
-				var context = Std.parseInt(args[i + 1]);
-				if(context >= 0) flags.unchanged_context = context;
-				args.splice(i,2);
-				break;
-			}
-		}
-	}
-	var cmd = args[0];
-	if(args.length < 2) {
-		io.writeStderr("daff can produce and apply tabular diffs.\n");
-		io.writeStderr("Call as:\n");
-		io.writeStderr("  daff [--output OUTPUT.csv] a.csv b.csv\n");
-		io.writeStderr("  daff [--output OUTPUT.csv] parent.csv a.csv b.csv\n");
-		io.writeStderr("  daff [--output OUTPUT.jsonbook] a.jsonbook b.jsonbook\n");
-		io.writeStderr("  daff patch [--output OUTPUT.csv] source.csv patch.csv\n");
-		io.writeStderr("  daff trim [--output OUTPUT.csv] source.csv\n");
-		io.writeStderr("  daff render [--output OUTPUT.html] diff.csv\n");
-		io.writeStderr("\n");
-		io.writeStderr("If you need more control, here is the full list of flags:\n");
-		io.writeStderr("  daff diff [--output OUTPUT.csv] [--context NUM] [--all] [--act ACT] a.csv b.csv\n");
-		io.writeStderr("     --context NUM: show NUM rows of context\n");
-		io.writeStderr("     --all:         do not prune unchanged rows\n");
-		io.writeStderr("     --act ACT:     show only a certain kind of change (update, insert, delete)\n");
-		io.writeStderr("\n");
-		io.writeStderr("  daff render [--output OUTPUT.html] [--css CSS.css] [--fragment] [--plain] diff.csv\n");
-		io.writeStderr("     --css CSS.css: generate a suitable css file to go with the html\n");
-		io.writeStderr("     --fragment:    generate just a html fragment rather than a page\n");
-		io.writeStderr("     --plain:       do not use fancy utf8 characters to make arrows prettier\n");
-		return 1;
-	}
-	if(output == null) output = "-";
-	var cmd1 = args[0];
-	var offset = 1;
-	if(!Lambda.has(["diff","patch","trim","render"],cmd1)) {
-		if(cmd1.indexOf(".") != -1 || cmd1.indexOf("--") == 0) {
-			cmd1 = "diff";
-			offset = 0;
-		}
-	}
-	var tool = new coopy.Coopy();
-	tool.io = io;
-	var parent = null;
-	if(args.length - offset >= 3) {
-		parent = tool.loadTable(args[offset]);
-		offset++;
-	}
-	var a = tool.loadTable(args[offset]);
-	var b = null;
-	if(args.length - offset >= 2) b = tool.loadTable(args[1 + offset]);
-	if(cmd1 == "diff") {
-		var ct = coopy.Coopy.compareTables3(parent,a,b);
-		var align = ct.align();
-		var td = new coopy.TableDiff(align,flags);
-		var o = new coopy.SimpleTable(0,0);
-		td.hilite(o);
-		tool.saveTable(output,o);
-	} else if(cmd1 == "patch") {
-		var patcher = new coopy.HighlightPatch(a,b);
-		patcher.apply();
-		tool.saveTable(output,a);
-	} else if(cmd1 == "trim") tool.saveTable(output,a); else if(cmd1 == "render") {
-		var renderer = new coopy.DiffRender();
-		renderer.usePrettyArrows(pretty);
-		renderer.render(a);
-		if(!fragment) renderer.completeHtml();
-		tool.saveText(output,renderer.html());
-		if(css_output != null) tool.saveText(css_output,renderer.sampleCss());
-	}
-	return 0;
 };
 coopy.Coopy.main = function() {
 	return 0;
@@ -1160,6 +1128,374 @@ coopy.Coopy.prototype = {
 			return output;
 		}
 	}
+	,command: function(io,cmd,args) {
+		var r = 0;
+		if(io.async()) r = io.command(cmd,args);
+		if(r != 999) {
+			io.writeStdout("$ " + cmd);
+			var _g = 0;
+			while(_g < args.length) {
+				var arg = args[_g];
+				++_g;
+				io.writeStdout(" ");
+				var spaced = arg.indexOf(" ") >= 0;
+				if(spaced) io.writeStdout("\"");
+				io.writeStdout(arg);
+				if(spaced) io.writeStdout("\"");
+			}
+			io.writeStdout("\n");
+		}
+		if(!io.async()) r = io.command(cmd,args);
+		return r;
+	}
+	,installGitDriver: function(io,formats) {
+		var r = 0;
+		if(this.status == null) {
+			this.status = new haxe.ds.StringMap();
+			this.daff_cmd = "";
+		}
+		var key = "hello";
+		if(!this.status.exists(key)) {
+			io.writeStdout("Setting up git to use daff on");
+			var _g = 0;
+			while(_g < formats.length) {
+				var format = formats[_g];
+				++_g;
+				io.writeStdout(" *." + format);
+			}
+			io.writeStdout(" files\n");
+			this.status.set(key,r);
+		}
+		key = "can_run_git";
+		if(!this.status.exists(key)) {
+			r = this.command(io,"git",["--version"]);
+			if(r == 999) return r;
+			this.status.set(key,r);
+			if(r != 0) {
+				io.writeStderr("! Cannot run git, aborting\n");
+				return 1;
+			}
+			io.writeStdout("- Can run git\n");
+		}
+		var daffs = ["daff","daff.rb","daff.py"];
+		if(this.daff_cmd == "") {
+			var _g1 = 0;
+			while(_g1 < daffs.length) {
+				var daff = daffs[_g1];
+				++_g1;
+				var key1 = "can_run_" + daff;
+				if(!this.status.exists(key1)) {
+					r = this.command(io,daff,["version"]);
+					if(r == 999) return r;
+					this.status.set(key1,r);
+					if(r == 0) {
+						this.daff_cmd = daff;
+						io.writeStdout("- Can run " + daff + " as \"" + daff + "\"\n");
+						break;
+					}
+				}
+			}
+			if(this.daff_cmd == "") {
+				io.writeStderr("! Cannot find daff, is it in your path?\n");
+				return 1;
+			}
+		}
+		var _g2 = 0;
+		while(_g2 < formats.length) {
+			var format1 = formats[_g2];
+			++_g2;
+			key = "have_diff_driver_" + format1;
+			if(!this.status.exists(key)) {
+				r = this.command(io,"git",["config","--global","--get","diff.daff-" + format1 + ".command"]);
+				if(r == 999) return r;
+				this.status.set(key,r);
+			}
+			var have_diff_driver = this.status.get(key) == 0;
+			key = "add_diff_driver_" + format1;
+			if(!this.status.exists(key)) {
+				if(!have_diff_driver) {
+					r = this.command(io,"git",["config","--global","diff.daff-" + format1 + ".command",this.daff_cmd + " diff --color --git"]);
+					if(r == 999) return r;
+					io.writeStdout("- Added diff driver for " + format1 + "\n");
+				} else {
+					r = 0;
+					io.writeStdout("- Already have diff driver for " + format1 + ", not touching it\n");
+				}
+				this.status.set(key,r);
+			}
+			key = "have_merge_driver_" + format1;
+			if(!this.status.exists(key)) {
+				r = this.command(io,"git",["config","--global","--get","merge.daff-" + format1 + ".driver"]);
+				if(r == 999) return r;
+				this.status.set(key,r);
+			}
+			var have_merge_driver = this.status.get(key) == 0;
+			key = "name_merge_driver_" + format1;
+			if(!this.status.exists(key)) {
+				if(!have_merge_driver) {
+					r = this.command(io,"git",["config","--global","merge.daff-" + format1 + ".name","daff tabular " + format1 + " merge"]);
+					if(r == 999) return r;
+				} else r = 0;
+				this.status.set(key,r);
+			}
+			key = "add_merge_driver_" + format1;
+			if(!this.status.exists(key)) {
+				if(!have_merge_driver) {
+					r = this.command(io,"git",["config","--global","merge.daff-" + format1 + ".driver",this.daff_cmd + " merge --output %A %O %A %B"]);
+					if(r == 999) return r;
+					io.writeStdout("- Added merge driver for " + format1 + "\n");
+				} else {
+					r = 0;
+					io.writeStdout("- Already have merge driver for " + format1 + ", not touching it\n");
+				}
+				this.status.set(key,r);
+			}
+		}
+		if(!io.exists(".git/config")) {
+			io.writeStderr("! This next part needs to happen in a git repository.\n");
+			io.writeStderr("! Please run again from the root of a git repository.\n");
+			return 1;
+		}
+		var attr = ".gitattributes";
+		var txt = "";
+		var post = "";
+		if(!io.exists(attr)) io.writeStdout("- No .gitattributes file\n"); else {
+			io.writeStdout("- You have a .gitattributes file\n");
+			txt = io.getContent(attr);
+		}
+		var need_update = false;
+		var _g3 = 0;
+		while(_g3 < formats.length) {
+			var format2 = formats[_g3];
+			++_g3;
+			if(txt.indexOf("*." + format2) >= 0) io.writeStderr("- Your .gitattributes file already mentions *." + format2 + "\n"); else {
+				post += "*." + format2 + " diff=daff-" + format2 + "\n";
+				post += "*." + format2 + " merge=daff-" + format2 + "\n";
+				io.writeStdout("- Placing the following lines in .gitattributes:\n");
+				io.writeStdout(post);
+				if(txt != "" && !need_update) txt += "\n";
+				txt += post;
+				need_update = true;
+			}
+		}
+		if(need_update) io.saveContent(attr,txt);
+		io.writeStdout("- Done!\n");
+		return 0;
+	}
+	,coopyhx: function(io) {
+		var args = io.args();
+		if(args[0] == "--test") return coopy.Coopy.randomTests();
+		var more = true;
+		var output = null;
+		var css_output = null;
+		var fragment = false;
+		var pretty = true;
+		var inplace = false;
+		var git = false;
+		var color = false;
+		var flags = new coopy.CompareFlags();
+		flags.always_show_header = true;
+		while(more) {
+			more = false;
+			var _g1 = 0;
+			var _g = args.length;
+			while(_g1 < _g) {
+				var i = _g1++;
+				var tag = args[i];
+				if(tag == "--output") {
+					more = true;
+					output = args[i + 1];
+					args.splice(i,2);
+					break;
+				} else if(tag == "--css") {
+					more = true;
+					fragment = true;
+					css_output = args[i + 1];
+					args.splice(i,2);
+					break;
+				} else if(tag == "--fragment") {
+					more = true;
+					fragment = true;
+					args.splice(i,1);
+					break;
+				} else if(tag == "--plain") {
+					more = true;
+					pretty = false;
+					args.splice(i,1);
+					break;
+				} else if(tag == "--all") {
+					more = true;
+					flags.show_unchanged = true;
+					args.splice(i,1);
+					break;
+				} else if(tag == "--act") {
+					more = true;
+					if(flags.acts == null) flags.acts = new haxe.ds.StringMap();
+					flags.acts.set(args[i + 1],true);
+					true;
+					args.splice(i,2);
+					break;
+				} else if(tag == "--context") {
+					more = true;
+					var context = Std.parseInt(args[i + 1]);
+					if(context >= 0) flags.unchanged_context = context;
+					args.splice(i,2);
+					break;
+				} else if(tag == "--inplace") {
+					more = true;
+					inplace = true;
+					args.splice(i,1);
+					break;
+				} else if(tag == "--git") {
+					more = true;
+					git = true;
+					args.splice(i,1);
+					break;
+				} else if(tag == "--color") {
+					more = true;
+					color = true;
+					args.splice(i,1);
+					break;
+				}
+			}
+		}
+		var cmd = args[0];
+		if(args.length < 2) {
+			if(cmd == "version") {
+				io.writeStdout(coopy.Coopy.VERSION + "\n");
+				return 0;
+			}
+			if(cmd == "git") {
+				io.writeStdout("You can use daff to improve git's handling of csv files, by using it as a\ndiff driver (for showing what has changed) and as a merge driver (for merging\nchanges between multiple versions).\n");
+				io.writeStdout("\n");
+				io.writeStdout("Automatic setup\n");
+				io.writeStdout("---------------\n\n");
+				io.writeStdout("Run:\n");
+				io.writeStdout("  daff git csv\n");
+				io.writeStdout("\n");
+				io.writeStdout("Manual setup\n");
+				io.writeStdout("------------\n\n");
+				io.writeStdout("Create and add a file called .gitattributes in the root directory of your\nrepository, containing:\n\n");
+				io.writeStdout("  *.csv diff=daff-csv\n");
+				io.writeStdout("  *.csv merge=daff-csv\n");
+				io.writeStdout("\nCreate a file called .gitconfig in your home directory (or alternatively\nopen .git/config for a particular repository) and add:\n\n");
+				io.writeStdout("  [diff \"daff-csv\"]\n");
+				io.writeStdout("  command = daff diff --color --git\n");
+				io.writeStderr("\n");
+				io.writeStdout("  [merge \"daff-csv\"]\n");
+				io.writeStdout("  name = daff tabular merge\n");
+				io.writeStdout("  driver = daff merge --output %A %O %A %B\n\n");
+				io.writeStderr("Make sure you can run daff from the command-line as just \"daff\" - if not,\nreplace \"daff\" in the driver and command lines above with the correct way\nto call it. Omit --color if your terminal does not support ANSI colors.");
+				io.writeStderr("\n");
+				return 0;
+			}
+			io.writeStderr("daff can produce and apply tabular diffs.\n");
+			io.writeStderr("Call as:\n");
+			io.writeStderr("  daff [--color] [--output OUTPUT.csv] a.csv b.csv\n");
+			io.writeStderr("  daff [--output OUTPUT.csv] parent.csv a.csv b.csv\n");
+			io.writeStderr("  daff [--output OUTPUT.jsonbook] a.jsonbook b.jsonbook\n");
+			io.writeStderr("  daff patch [--inplace] [--output OUTPUT.csv] a.csv patch.csv\n");
+			io.writeStderr("  daff merge [--inplace] [--output OUTPUT.csv] parent.csv a.csv b.csv\n");
+			io.writeStderr("  daff trim [--output OUTPUT.csv] source.csv\n");
+			io.writeStderr("  daff render [--output OUTPUT.html] diff.csv\n");
+			io.writeStderr("  daff git\n");
+			io.writeStderr("  daff version\n");
+			io.writeStderr("\n");
+			io.writeStderr("The --inplace option to patch and merge will result in modification of a.csv.\n");
+			io.writeStderr("\n");
+			io.writeStderr("If you need more control, here is the full list of flags:\n");
+			io.writeStderr("  daff diff [--output OUTPUT.csv] [--context NUM] [--all] [--act ACT] a.csv b.csv\n");
+			io.writeStderr("     --color:       highlight changes with terminal colors\n");
+			io.writeStderr("     --context NUM: show NUM rows of context\n");
+			io.writeStderr("     --all:         do not prune unchanged rows\n");
+			io.writeStderr("     --act ACT:     show only a certain kind of change (update, insert, delete)\n");
+			io.writeStderr("\n");
+			io.writeStderr("  daff diff --git path old-file old-hex old-mode new-file new-hex new-mode\n");
+			io.writeStderr("     --git:         process arguments provided by git to diff drivers\n");
+			io.writeStderr("\n");
+			io.writeStderr("  daff render [--output OUTPUT.html] [--css CSS.css] [--fragment] [--plain] diff.csv\n");
+			io.writeStderr("     --css CSS.css: generate a suitable css file to go with the html\n");
+			io.writeStderr("     --fragment:    generate just a html fragment rather than a page\n");
+			io.writeStderr("     --plain:       do not use fancy utf8 characters to make arrows prettier\n");
+			return 1;
+		}
+		var cmd1 = args[0];
+		var offset = 1;
+		if(!Lambda.has(["diff","patch","merge","trim","render","git","version"],cmd1)) {
+			if(cmd1.indexOf(".") != -1 || cmd1.indexOf("--") == 0) {
+				cmd1 = "diff";
+				offset = 0;
+			}
+		}
+		if(cmd1 == "git") {
+			var types = args.splice(offset,args.length - offset);
+			return this.installGitDriver(io,types);
+		}
+		if(git) {
+			var ct = args.length - offset;
+			if(ct != 7) {
+				io.writeStderr("Expected 7 parameters from git, but got " + ct + "\n");
+				return 1;
+			}
+			var git_args = args.splice(offset,ct);
+			args.splice(0,args.length);
+			offset = 0;
+			var path = git_args[0];
+			var old_file = git_args[1];
+			var new_file = git_args[4];
+			io.writeStdout("--- a/" + path + "\n");
+			io.writeStdout("+++ b/" + path + "\n");
+			args.push(old_file);
+			args.push(new_file);
+		}
+		var tool = new coopy.Coopy();
+		tool.io = io;
+		var parent = null;
+		if(args.length - offset >= 3) {
+			parent = tool.loadTable(args[offset]);
+			offset++;
+		}
+		var aname = args[offset];
+		var a = tool.loadTable(aname);
+		var b = null;
+		if(args.length - offset >= 2) b = tool.loadTable(args[1 + offset]);
+		if(inplace) {
+			if(output != null) io.writeStderr("Please do not use --inplace when specifying an output.\n");
+			output = aname;
+			return 1;
+		}
+		if(output == null) output = "-";
+		var ok = true;
+		if(cmd1 == "diff") {
+			var ct1 = coopy.Coopy.compareTables3(parent,a,b);
+			var align = ct1.align();
+			var td = new coopy.TableDiff(align,flags);
+			var o = new coopy.SimpleTable(0,0);
+			td.hilite(o);
+			if(color) {
+				var render = new coopy.TerminalDiffRender();
+				tool.saveText(output,render.render(o));
+			} else tool.saveTable(output,o);
+		} else if(cmd1 == "patch") {
+			var patcher = new coopy.HighlightPatch(a,b);
+			patcher.apply();
+			tool.saveTable(output,a);
+		} else if(cmd1 == "merge") {
+			var merger = new coopy.Merger(parent,a,b,flags);
+			var conflicts = merger.apply();
+			ok = conflicts == 0;
+			if(conflicts > 0) io.writeStderr(conflicts + " conflict" + (conflicts > 1?"s":"") + "\n");
+			tool.saveTable(output,a);
+		} else if(cmd1 == "trim") tool.saveTable(output,a); else if(cmd1 == "render") {
+			var renderer = new coopy.DiffRender();
+			renderer.usePrettyArrows(pretty);
+			renderer.render(a);
+			if(!fragment) renderer.completeHtml();
+			tool.saveText(output,renderer.html());
+			if(css_output != null) tool.saveText(css_output,renderer.sampleCss());
+		}
+		if(ok) return 0; else return 1;
+	}
 };
 coopy.CrossMatch = function() {
 };
@@ -1191,7 +1527,6 @@ coopy.Csv.prototype = {
 	}
 	,renderCell: function(v,d) {
 		if(d == null) return "NULL";
-		if(v.equals(d,null)) return "NULL";
 		var str = v.toString(d);
 		var delim = ",";
 		var need_quote = false;
@@ -1316,6 +1651,7 @@ coopy.DiffRender.examineCell = function(x,y,value,vcol,vrow,vcorner,cell) {
 	cell.category = "";
 	cell.category_given_tr = "";
 	cell.separator = "";
+	cell.pretty_separator = "";
 	cell.conflicted = false;
 	cell.updated = false;
 	cell.pvalue = cell.lvalue = cell.rvalue = null;
@@ -1350,6 +1686,7 @@ coopy.DiffRender.examineCell = function(x,y,value,vcol,vrow,vcorner,cell) {
 				}
 				cell.updated = true;
 				cell.separator = div;
+				cell.pretty_separator = div;
 				if(cell.pretty_value == div) tokens = ["",""]; else tokens = cell.pretty_value.split(div);
 				var pretty_tokens = tokens;
 				if(tokens.length >= 2) {
@@ -1361,7 +1698,8 @@ coopy.DiffRender.examineCell = function(x,y,value,vcol,vrow,vcorner,cell) {
 					pretty_tokens[0] = coopy.DiffRender.markSpaces(ref,tokens[2]);
 					pretty_tokens[2] = coopy.DiffRender.markSpaces(tokens[2],ref);
 				}
-				cell.pretty_value = pretty_tokens.join(String.fromCharCode(8594));
+				cell.pretty_separator = String.fromCharCode(8594);
+				cell.pretty_value = pretty_tokens.join(cell.pretty_separator);
 				cell.category_given_tr = cell.category = cat;
 				var offset;
 				if(cell.conflicted) offset = 1; else offset = 0;
@@ -2140,6 +2478,132 @@ coopy.IndexPair.prototype = {
 		return this.quality;
 	}
 };
+coopy.Merger = $hx_exports.coopy.Merger = function(parent,local,remote,flags) {
+	this.parent = parent;
+	this.local = local;
+	this.remote = remote;
+	this.flags = flags;
+};
+coopy.Merger.__name__ = true;
+coopy.Merger.makeConflictedCell = function(view,pcell,lcell,rcell) {
+	return view.toDatum("((( " + view.toString(pcell) + " ))) " + view.toString(lcell) + " /// " + view.toString(rcell));
+};
+coopy.Merger.prototype = {
+	shuffleDimension: function(dim_units,len,fate,cl,cr) {
+		var at = 0;
+		var _g = 0;
+		while(_g < dim_units.length) {
+			var cunit = dim_units[_g];
+			++_g;
+			if(cunit.p < 0) {
+				if(cunit.l < 0) {
+					if(cunit.r >= 0) {
+						cr.set(cunit.r,at);
+						at;
+						at++;
+					}
+				} else {
+					cl.set(cunit.l,at);
+					at;
+					at++;
+				}
+			} else if(cunit.l >= 0) {
+				if(cunit.r < 0) {
+				} else {
+					cl.set(cunit.l,at);
+					at;
+					at++;
+				}
+			}
+		}
+		var _g1 = 0;
+		while(_g1 < len) {
+			var x = _g1++;
+			var idx = cl.get(x);
+			if(idx == null) fate.push(-1); else fate.push(idx);
+		}
+		return at;
+	}
+	,shuffleColumns: function() {
+		this.column_mix_local = new haxe.ds.IntMap();
+		this.column_mix_remote = new haxe.ds.IntMap();
+		var fate = new Array();
+		var wfate = this.shuffleDimension(this.column_units,this.local.get_width(),fate,this.column_mix_local,this.column_mix_remote);
+		this.local.insertOrDeleteColumns(fate,wfate);
+	}
+	,shuffleRows: function() {
+		this.row_mix_local = new haxe.ds.IntMap();
+		this.row_mix_remote = new haxe.ds.IntMap();
+		var fate = new Array();
+		var hfate = this.shuffleDimension(this.units,this.local.get_height(),fate,this.row_mix_local,this.row_mix_remote);
+		this.local.insertOrDeleteRows(fate,hfate);
+	}
+	,apply: function() {
+		this.conflicts = 0;
+		var ct = coopy.Coopy.compareTables3(this.parent,this.local,this.remote);
+		var align = ct.align();
+		this.order = align.toOrderPruned(true);
+		this.units = this.order.getList();
+		this.column_order = align.meta.toOrderPruned(false);
+		this.column_units = this.column_order.getList();
+		var allow_insert = this.flags.allowInsert();
+		var allow_delete = this.flags.allowDelete();
+		var allow_update = this.flags.allowUpdate();
+		var view = this.parent.getCellView();
+		var _g = 0;
+		var _g1 = this.units;
+		while(_g < _g1.length) {
+			var row = _g1[_g];
+			++_g;
+			if(row.l >= 0 && row.r >= 0 && row.p >= 0) {
+				var _g2 = 0;
+				var _g3 = this.column_units;
+				while(_g2 < _g3.length) {
+					var col = _g3[_g2];
+					++_g2;
+					if(col.l >= 0 && col.r >= 0 && col.p >= 0) {
+						var pcell = this.parent.getCell(col.p,row.p);
+						var rcell = this.remote.getCell(col.r,row.r);
+						if(!view.equals(pcell,rcell)) {
+							var lcell = this.local.getCell(col.l,row.l);
+							if(view.equals(pcell,lcell)) this.local.setCell(col.l,row.l,rcell); else {
+								this.local.setCell(col.l,row.l,coopy.Merger.makeConflictedCell(view,pcell,lcell,rcell));
+								this.conflicts++;
+							}
+						}
+					}
+				}
+			}
+		}
+		this.shuffleColumns();
+		this.shuffleRows();
+		var $it0 = this.column_mix_remote.keys();
+		while( $it0.hasNext() ) {
+			var x = $it0.next();
+			var x2 = this.column_mix_remote.get(x);
+			var _g4 = 0;
+			var _g11 = this.units;
+			while(_g4 < _g11.length) {
+				var unit = _g11[_g4];
+				++_g4;
+				if(unit.l >= 0 && unit.r >= 0) this.local.setCell(x2,this.row_mix_local.get(unit.l),this.remote.getCell(x,unit.r)); else if(unit.p < 0 && unit.r >= 0) this.local.setCell(x2,this.row_mix_remote.get(unit.r),this.remote.getCell(x,unit.r));
+			}
+		}
+		var $it1 = this.row_mix_remote.keys();
+		while( $it1.hasNext() ) {
+			var y = $it1.next();
+			var y2 = this.row_mix_remote.get(y);
+			var _g5 = 0;
+			var _g12 = this.column_units;
+			while(_g5 < _g12.length) {
+				var unit1 = _g12[_g5];
+				++_g5;
+				if(unit1.l >= 0 && unit1.r >= 0) this.local.setCell(this.column_mix_local.get(unit1.l),y2,this.remote.getCell(unit1.r,y));
+			}
+		}
+		return this.conflicts;
+	}
+};
 coopy.Mover = $hx_exports.coopy.Mover = function() {
 };
 coopy.Mover.__name__ = true;
@@ -2715,7 +3179,7 @@ coopy.TableDiff.prototype = {
 		output.clear();
 		var row_map = new haxe.ds.IntMap();
 		var col_map = new haxe.ds.IntMap();
-		var order = this.align.toOrder();
+		var order = this.align.toOrderPruned(true);
 		var units = order.getList();
 		var has_parent = this.align.reference != null;
 		var a;
@@ -2769,7 +3233,7 @@ coopy.TableDiff.prototype = {
 				}
 			}
 		}
-		var column_order = this.align.meta.toOrder();
+		var column_order = this.align.meta.toOrderPruned(false);
 		var column_units = column_order.getList();
 		var show_rc_numbers = false;
 		var row_moves = null;
@@ -3181,6 +3645,15 @@ coopy.TableIO.prototype = {
 	}
 	,writeStderr: function(txt) {
 	}
+	,command: function(cmd,args) {
+		return 1;
+	}
+	,async: function() {
+		return false;
+	}
+	,exists: function(path) {
+		return false;
+	}
 };
 coopy.TableModifier = $hx_exports.coopy.TableModifier = function(t) {
 	this.t = t;
@@ -3208,30 +3681,57 @@ coopy.TableText.prototype = {
 		return this.view.toString(this.rows.getCell(x,y));
 	}
 };
-coopy.TableView = $hx_exports.coopy.TableView = function() {
+coopy.TerminalDiffRender = $hx_exports.coopy.TerminalDiffRender = function() {
 };
-coopy.TableView.__name__ = true;
-coopy.TableView.__interfaces__ = [coopy.View];
-coopy.TableView.prototype = {
-	toString: function(d) {
-		return "" + Std.string(d);
-	}
-	,getBag: function(d) {
-		return null;
-	}
-	,getTable: function(d) {
-		var table = d;
-		return table;
-	}
-	,hasStructure: function(d) {
-		return true;
-	}
-	,equals: function(d1,d2) {
-		console.log("TableView.equals called");
-		return false;
-	}
-	,toDatum: function(str) {
-		return new coopy.SimpleCell(str);
+coopy.TerminalDiffRender.__name__ = true;
+coopy.TerminalDiffRender.prototype = {
+	render: function(t) {
+		var csv = new coopy.Csv();
+		var result = "";
+		var w = t.get_width();
+		var h = t.get_height();
+		var txt = "";
+		var v = t.getCellView();
+		var tt = new coopy.TableText(t);
+		var codes = new haxe.ds.StringMap();
+		codes.set("header","\x1B[0;1m");
+		codes.set("spec","\x1B[35;1m");
+		codes.set("add","\x1B[32;1m");
+		codes.set("conflict","\x1B[33;1m");
+		codes.set("modify","\x1B[34;1m");
+		codes.set("remove","\x1B[31;1m");
+		codes.set("minor","\x1B[2m");
+		codes.set("done","\x1B[0m");
+		var _g = 0;
+		while(_g < h) {
+			var y = _g++;
+			var _g1 = 0;
+			while(_g1 < w) {
+				var x = _g1++;
+				if(x > 0) txt += codes.get("minor") + "," + codes.get("done");
+				var val = tt.getCellText(x,y);
+				if(val == null) val = "";
+				var cell = coopy.DiffRender.renderCell(tt,x,y);
+				var code = null;
+				if(cell.category != null) code = codes.get(cell.category);
+				if(cell.category_given_tr != null) {
+					var code_tr = codes.get(cell.category_given_tr);
+					if(code_tr != null) code = code_tr;
+				}
+				if(code != null) {
+					if(cell.rvalue != null) {
+						val = codes.get("remove") + cell.lvalue + codes.get("modify") + cell.pretty_separator + codes.get("add") + cell.rvalue + codes.get("done");
+						if(cell.pvalue != null) val = codes.get("conflict") + cell.pvalue + codes.get("modify") + cell.pretty_separator + val;
+					} else {
+						val = cell.pretty_value;
+						val = code + val + codes.get("done");
+					}
+				}
+				txt += csv.renderCell(v,val);
+			}
+			txt += "\r\n";
+		}
+		return txt;
 	}
 };
 coopy.Unit = function(l,r,p) {
@@ -3588,8 +4088,9 @@ Math.isNaN = function(i1) {
 };
 String.__name__ = true;
 Array.__name__ = true;
+coopy.Coopy.VERSION = "1.1.8";
 coopy.Coopy.main();
-})(typeof exports != "undefined" ? exports : window);
+})(typeof window != "undefined" ? window : exports);
 
 
 if (typeof exports != "undefined") {
@@ -3612,6 +4113,7 @@ if (typeof exports != "undefined") {
 	    coopy[f] = coopy.Coopy[f]; 
 	}
     } 
+    daff = coopy;
 }
 (function() {
 
@@ -3622,10 +4124,10 @@ if (typeof exports != "undefined") {
     }
 }
 if (coopy == null) {
-    coopy = window.coopy;
+    coopy = window.daff;
 }
 
-var CoopyTableView = function(data) {
+var TableView = function(data) {
     // variant constructor (cols, rows)
     if (arguments.length==2) {
 	var lst = [];
@@ -3646,35 +4148,35 @@ var CoopyTableView = function(data) {
     }
 }
 
-CoopyTableView.prototype.get_width = function() {
+TableView.prototype.get_width = function() {
     return this.width;
 }
 
-CoopyTableView.prototype.get_height = function() {
+TableView.prototype.get_height = function() {
     return this.height;
 }
 
-CoopyTableView.prototype.getCell = function(x,y) {
+TableView.prototype.getCell = function(x,y) {
     return this.data[y][x];
 }
 
-CoopyTableView.prototype.setCell = function(x,y,c) {
+TableView.prototype.setCell = function(x,y,c) {
     this.data[y][x] = c;
 }
 
-CoopyTableView.prototype.toString = function() {
+TableView.prototype.toString = function() {
     return coopy.SimpleTable.tableToString(this);
 }
 
-CoopyTableView.prototype.getCellView = function() {
+TableView.prototype.getCellView = function() {
     return new coopy.SimpleView();
 }
 
-CoopyTableView.prototype.isResizable = function() {
+TableView.prototype.isResizable = function() {
     return true;
 }
 
-CoopyTableView.prototype.resize = function(w,h) {
+TableView.prototype.resize = function(w,h) {
     this.width = w;
     this.height = h;
     for (var i=0; i<this.data.length; i++) {
@@ -3698,7 +4200,7 @@ CoopyTableView.prototype.resize = function(w,h) {
     return true;
 }
 
-CoopyTableView.prototype.clear = function() {
+TableView.prototype.clear = function() {
     for (var i=0; i<this.data.length; i++) {
 	var row = this.data[i];
 	for (var j=0; j<row.length; j++) {
@@ -3707,13 +4209,13 @@ CoopyTableView.prototype.clear = function() {
     }
 }
 
-CoopyTableView.prototype.trim = function() {
+TableView.prototype.trim = function() {
     var changed = this.trimRows();
     changed = changed || this.trimColumns();
     return changed;
 }
 
-CoopyTableView.prototype.trimRows = function() {
+TableView.prototype.trimRows = function() {
     var changed = false;
     while (true) {
 	if (this.height==0) return changed;
@@ -3726,7 +4228,7 @@ CoopyTableView.prototype.trimRows = function() {
     }
 }
 
-CoopyTableView.prototype.trimColumns = function() {
+TableView.prototype.trimColumns = function() {
     var top_content = 0;
     for (var i=0; i<this.height; i++) {
 	if (top_content>=this.width) break;
@@ -3745,19 +4247,19 @@ CoopyTableView.prototype.trimColumns = function() {
     return true;
 }
 
-CoopyTableView.prototype.getData = function() {
+TableView.prototype.getData = function() {
     return this.data;
 }
 
-CoopyTableView.prototype.clone = function() {
+TableView.prototype.clone = function() {
     var ndata = [];
     for (var i=0; i<this.get_height(); i++) {
 	ndata[i] = this.data[i].slice();
     }
-    return new CoopyTableView(ndata);
+    return new TableView(ndata);
 }
 
-CoopyTableView.prototype.insertOrDeleteRows = function(fate, hfate) {
+TableView.prototype.insertOrDeleteRows = function(fate, hfate) {
     var ndata = [];
     for (var i=0; i<fate.length; i++) {
         var j = fate[i];
@@ -3775,7 +4277,7 @@ CoopyTableView.prototype.insertOrDeleteRows = function(fate, hfate) {
     return true;
 }
 
-CoopyTableView.prototype.insertOrDeleteColumns = function(fate, wfate) {
+TableView.prototype.insertOrDeleteColumns = function(fate, wfate) {
     if (wfate==this.width && wfate==fate.length) {
 	var eq = true;
 	for (var i=0; i<wfate; i++) {
@@ -3802,7 +4304,7 @@ CoopyTableView.prototype.insertOrDeleteColumns = function(fate, wfate) {
     return true;
 }
 
-CoopyTableView.prototype.isSimilar = function(alt) {
+TableView.prototype.isSimilar = function(alt) {
     if (alt.width!=this.width) return false;
     if (alt.height!=this.height) return false;
     for (var c=0; c<this.width; c++) {
@@ -3819,10 +4321,96 @@ CoopyTableView.prototype.isSimilar = function(alt) {
 }
 
 if (typeof exports != "undefined") {
-    exports.CoopyTableView = CoopyTableView;
+    exports.TableView = TableView;
 } else {
-    if (typeof window["coopy"] == "undefined") window["coopy"] = {};
-    window.coopy.CoopyTableView = CoopyTableView;
+    if (typeof window["daff"] == "undefined") window["daff"] = {};
+    window.daff.TableView = TableView;
 }
 
 })();
+if (typeof require != "undefined") {
+    if (require.main === module) {
+
+	var coopy = exports;
+	var fs = require('fs');
+	var exec = require('child_process').exec;
+	var readline = null;
+	
+	var tio = {}
+	
+	tio.getContent = function(name) {
+	    if (name=="-") {
+		// only works on Linux, all other solutions seem broken
+		return fs.readFileSync('/dev/stdin',"utf8");
+	    }
+	    return fs.readFileSync(name,"utf8");
+	}
+	
+	tio.saveContent = function(name,txt) {
+	    return fs.writeFileSync(name,txt,"utf8");
+	}
+	
+	tio.args = function() {
+	    return process.argv.slice(2);
+	}
+	
+	tio.writeStdout = function(txt) {
+	    process.stdout.write(txt);
+	}
+	
+	tio.writeStderr = function(txt) {
+	    process.stderr.write(txt);
+	}
+	
+	tio.async = function() {
+	    return true;
+	}
+
+	tio.exists = function(path) {
+	    return fs.existsSync(path);
+	}
+
+	var cmd_result = 1;
+	var cmd_pending = null;
+
+	tio.command = function(cmd,args) {
+	    // we promise not to use any arguments with quotes in them
+	    for (var i=0; i<args.length; i++) {
+		var argi = args[i];
+		if (argi.indexOf(" ")>=0) {
+		    argi = "\"" + argi + "\"";
+		}
+		cmd += " " + argi;
+	    }
+	    var cmd = cmd; + " " + args.join(" ");
+	    if (cmd == cmd_pending) {
+		cmd_pending = null;
+		return cmd_result;
+	    } else if (cmd_pending!=null) {
+		return 998; // "hack not working correctly"
+	    }
+	    cmd_pending = cmd;
+	    return 999; // "cannot be executed synchronously"
+	}
+
+	var main = new coopy.Coopy();
+
+	function run_daff() {
+	    var code = main.coopyhx(tio);
+	    if (code==999) {
+		if (cmd_pending!=null) {
+		    exec(cmd_pending,function(error,stdout,stderr) {
+			cmd_result = 0;
+			if (error!=null) {
+			    cmd_result = error.code;
+			}
+			run_daff();
+		    });
+		}
+	    } else {
+		process.exit(code);
+	    }
+	}
+	run_daff();
+    }
+}
