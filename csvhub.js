@@ -8,7 +8,7 @@ for (var f = 0; f < files.length; f++) {
 
 
     // Get all diff lines
-    lines = files[f].querySelectorAll(".diff-line-code");
+    lines = files[f].querySelectorAll(".blob-code");
 
     // Get data
     var old_data = []
