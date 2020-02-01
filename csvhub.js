@@ -14,9 +14,9 @@ for (var f = 0; f < files.length; f++) {
     for (var l = 0; l < lines.length; l++) {
       // Parse data from line
       code_marker = lines[l].getAttribute("data-code-marker");
-      line = lines[l].textContent;
-      data = $.csv.toArray(line.substr(1).trim());
-      console.log(data);
+      line = lines[l].textContent.trim();
+      if (line.length == 0) continue; // Skip empty line
+      data = $.csv.toArray(line);
 
       // Line has been added
       if (code_marker == "+") {
