@@ -10,7 +10,8 @@
   "content_scripts": [
     {
       "matches": [
-        "https://github.com/*"
+        "*://*/*/*/pull/*/files",
+        "*://*/*/*/commit/*"
       ],
       "js": [
         "js/daff-1.1.8.js",
